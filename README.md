@@ -99,7 +99,7 @@ The database is automatically initialized with sample data when the container st
      - Port: `5432`
      - Database: `app_db`
      - Username: `postgres`
-     - Password: `password`
+     - Password: `postgres`
 
 ## Project Structure
 
