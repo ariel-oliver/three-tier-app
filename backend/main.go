@@ -12,14 +12,44 @@ import (
 	"time"
 
 	_ "github.com/lib/pq"
+	httpSwagger "github.com/swaggo/http-swagger"
+	_ "three-tier-backend/docs"
 )
 
+// @title Three Tier Application API
+// @version 1.0
+// @description RESTful API for managing users in a three-tier application
+// @termsOfService http://swagger.io/terms/
+
+// @contact.name API Support
+// @contact.email support@example.com
+
+// @license.name MIT
+// @license.url https://opensource.org/licenses/MIT
+
+// @host localhost:8080
+// @BasePath /
+// @schemes http https
+
 type User struct {
-	ID        int       `json:"id"`
-	Name      string    `json:"name"`
-	Email     string    `json:"email"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID        int       `json:"id" example:"1"`
+	Name      string    `json:"name" example:"John Doe"`
+	Email     string    `json:"email" example:"john.doe@example.com"`
+	CreatedAt time.Time `json:"created_at" example:"2024-01-01T00:00:00Z"`
+	UpdatedAt time.Time `json:"updated_at" example:"2024-01-01T00:00:00Z"`
+}
+
+type CreateUserRequest struct {
+	Name  string `json:"name" example:"John Doe" binding:"required"`
+	Email string `json:"email" example:"john.doe@example.com" binding:"required"`
+}
+
+type ErrorResponse struct {
+	Error string `json:"error" example:"User not found"`
+}
+
+type HealthResponse struct {
+	Status string `json:"status" example:"healthy"`
 }
 
 type Server struct {
@@ -54,6 +84,9 @@ func main() {
 	http.HandleFunc("/users", server.enableCORS(server.usersHandler))
 	http.HandleFunc("/users/", server.enableCORS(server.userHandler))
 	http.HandleFunc("/health", server.healthHandler)
+
+	// Swagger documentation
+	http.HandleFunc("/swagger/", httpSwagger.WrapHandler)
 
 	port := getEnv("PORT", "8080")
 	log.Printf("Server starting on port %s", port)
@@ -106,6 +139,15 @@ func (s *Server) userHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// GetUsers godoc
+// @Summary List all users
+// @Description Get a list of all users in the system
+// @Tags users
+// @Accept json
+// @Produce json
+// @Success 200 {array} User
+// @Failure 500 {object} ErrorResponse
+// @Router /users [get]
 func (s *Server) getUsers(w http.ResponseWriter, r *http.Request) {
 	rows, err := s.db.Query("SELECT id, name, email, created_at, updated_at FROM users ORDER BY id")
 	if err != nil {
@@ -129,6 +171,18 @@ func (s *Server) getUsers(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(users)
 }
 
+// GetUser godoc
+// @Summary Get a user by ID
+// @Description Get detailed information about a specific user
+// @Tags users
+// @Accept json
+// @Produce json
+// @Param id path int true "User ID"
+// @Success 200 {object} User
+// @Failure 400 {object} ErrorResponse "Invalid user ID"
+// @Failure 404 {object} ErrorResponse "User not found"
+// @Failure 500 {object} ErrorResponse "Internal server error"
+// @Router /users/{id} [get]
 func (s *Server) getUser(w http.ResponseWriter, r *http.Request, id int) {
 	var user User
 	err := s.db.QueryRow("SELECT id, name, email, created_at, updated_at FROM users WHERE id = $1", id).
@@ -147,6 +201,18 @@ func (s *Server) getUser(w http.ResponseWriter, r *http.Request, id int) {
 	json.NewEncoder(w).Encode(user)
 }
 
+// CreateUser godoc
+// @Summary Create a new user
+// @Description Add a new user to the system
+// @Tags users
+// @Accept json
+// @Produce json
+// @Param user body CreateUserRequest true "User creation request"
+// @Success 201 {object} User
+// @Failure 400 {object} ErrorResponse "Invalid input"
+// @Failure 409 {object} ErrorResponse "Email already exists"
+// @Failure 500 {object} ErrorResponse "Internal server error"
+// @Router /users [post]
 func (s *Server) createUser(w http.ResponseWriter, r *http.Request) {
 	var user User
 	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
@@ -177,6 +243,20 @@ func (s *Server) createUser(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(user)
 }
 
+// UpdateUser godoc
+// @Summary Update a user
+// @Description Update an existing user's information
+// @Tags users
+// @Accept json
+// @Produce json
+// @Param id path int true "User ID"
+// @Param user body CreateUserRequest true "User update request"
+// @Success 200 {object} User
+// @Failure 400 {object} ErrorResponse "Invalid input"
+// @Failure 404 {object} ErrorResponse "User not found"
+// @Failure 409 {object} ErrorResponse "Email already exists"
+// @Failure 500 {object} ErrorResponse "Internal server error"
+// @Router /users/{id} [put]
 func (s *Server) updateUser(w http.ResponseWriter, r *http.Request, id int) {
 	var user User
 	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
@@ -210,6 +290,17 @@ func (s *Server) updateUser(w http.ResponseWriter, r *http.Request, id int) {
 	json.NewEncoder(w).Encode(user)
 }
 
+// DeleteUser godoc
+// @Summary Delete a user
+// @Description Remove a user from the system
+// @Tags users
+// @Accept json
+// @Produce json
+// @Param id path int true "User ID"
+// @Success 204 "No Content"
+// @Failure 404 {object} ErrorResponse "User not found"
+// @Failure 500 {object} ErrorResponse "Internal server error"
+// @Router /users/{id} [delete]
 func (s *Server) deleteUser(w http.ResponseWriter, r *http.Request, id int) {
 	result, err := s.db.Exec("DELETE FROM users WHERE id = $1", id)
 	if err != nil {
@@ -231,6 +322,14 @@ func (s *Server) deleteUser(w http.ResponseWriter, r *http.Request, id int) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// HealthCheck godoc
+// @Summary Health check endpoint
+// @Description Check if the API is running and healthy
+// @Tags health
+// @Accept json
+// @Produce json
+// @Success 200 {object} HealthResponse
+// @Router /health [get]
 func (s *Server) healthHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"status": "healthy"})

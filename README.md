@@ -7,7 +7,7 @@ A modern three-tier application demonstrating full-stack development with contai
 - **Frontend**: HTMX with modern CSS and nginx
 - **Backend**: Go 1.25 with native HTTP server and PostgreSQL driver
 - **Database**: PostgreSQL 14.19 with initialization scripts
-
+-
 ## Features
 
 - Modern HTMX frontend with dynamic UI interactions
@@ -31,35 +31,13 @@ A modern three-tier application demonstrating full-stack development with contai
 3. **Access the application**
    - Frontend: http://localhost:3000
    - Backend API: http://localhost:8080
+   - Swagger API Docs: http://localhost:8080/swagger/index.html
    - Database: localhost:5432
    - pgAdmin: http://localhost:5050 (Email: admin@admin.com, Password: admin)
 
-## Configuration
-
-### Backend URL Configuration
-
-The frontend can be configured to connect to different backend URLs using environment variables:
-
-1. **Create a `.env` file** (optional):
-   ```bash
-   cp .env.example .env
-   ```
-
-2. **Edit the `.env` file** to set your backend URL:
-   ```env
-   BACKEND_URL=http://localhost:8080
-   ```
-
-3. **Rebuild and restart** the frontend container:
-   ```bash
-   docker-compose up --build frontend
-   ```
-
-**Default**: If no `.env` file is provided, the backend URL defaults to `http://localhost:8080`
-
-**Production**: For production deployments, set `BACKEND_URL` to your actual backend URL (e.g., `https://api.example.com`)
-
 ## API Endpoints
+
+Interactive API documentation available at http://localhost:8080/swagger/index.html
 
 - `GET /users` - List all users
 - `GET /users/{id}` - Get user by ID
@@ -67,6 +45,7 @@ The frontend can be configured to connect to different backend URLs using enviro
 - `PUT /users/{id}` - Update user
 - `DELETE /users/{id}` - Delete user
 - `GET /health` - Health check
+- `GET /swagger/` - Swagger UI
 
 ## Development
 
@@ -75,6 +54,12 @@ The frontend can be configured to connect to different backend URLs using enviro
 cd backend
 go mod tidy
 go run main.go
+```
+
+To regenerate Swagger docs after API changes:
+```bash
+cd backend
+swag init
 ```
 
 ### Frontend Development
@@ -108,6 +93,7 @@ three-tier-app/
 ├── backend/
 │   ├── main.go          # Go API server
 │   ├── go.mod           # Go dependencies
+│   ├── docs/            # Swagger documentation
 │   └── Dockerfile       # Backend container
 ├── frontend/
 │   ├── static/
@@ -134,6 +120,7 @@ three-tier-app/
 - RESTful API design
 - CORS support
 - Environment-based configuration
+- Swagger/OpenAPI documentation with interactive UI
 
 ### Database
 - PostgreSQL 14.19
