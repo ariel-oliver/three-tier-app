@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Management - Three Tier App</title>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>User Management</h1>
+            <p class="subtitle">HTMX Frontend for Three-Tier Application</p>
+        </header>
+
+        <!-- Add User Form -->
+        <div class="card">
+            <h2>Add New User</h2>
+            <form id="add-user-form">
+                <div class="form-group">
+                    <label for="name">Name:</label>
+                    <input type="text" id="name" name="name" required>
+                </div>
+                <div class="form-group">
+                    <label for="email">Email:</label>
+                    <input type="email" id="email" name="email" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Add User</button>
+            </form>
+            <div id="add-user-message" class="message"></div>
+        </div>
+
+        <!-- Users List -->
+        <div class="card">
+            <div class="card-header">
+                <h2>Users</h2>
+                <button class="btn btn-secondary" onclick="loadUsers()">
+                    Refresh
+                </button>
+            </div>
+
+            <div id="user-list">
+                <div class="loading">Loading users...</div>
+            </div>
+        </div>
+
+        <!-- Edit User Modal -->
+        <div id="edit-modal" class="modal">
+            <div class="modal-content">
+                <span class="close" onclick="closeEditModal()">&times;</span>
+                <h2>Edit User</h2>
+                <form id="edit-form">
+                    <input type="hidden" id="edit-id">
+                    <div class="form-group">
+                        <label for="edit-name">Name:</label>
+                        <input type="text" id="edit-name" name="name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-email">Email:</label>
+                        <input type="email" id="edit-email" name="email" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Update User</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeEditModal()">Cancel</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:8080';
+
+        // Load users on page load
+        window.addEventListener('load', function() {
+            loadUsers();
+        });
+
+        // Load users from API
+        async function loadUsers() {
+            try {
+                const response = await fetch(`${API_URL}/users`);
+                if (!response.ok) {
+                    throw new Error('Failed to load users');
+                }
+                const users = await response.json();
+                displayUsers(users);
+            } catch (error) {
+                console.error('Error loading users:', error);
+                document.getElementById('user-list').innerHTML =
+                    '<div class="error-state">Error loading users. Make sure the backend is running on port 8080.</div>';
+            }
+        }
+
+        // Display users in table
+        function displayUsers(users) {
+            const userList = document.getElementById('user-list');
+
+            if (!users || users.length === 0) {
+                userList.innerHTML = '<div class="empty-state">No users found. Add your first user above!</div>';
+                return;
+            }
+
+            let html = '<table class="user-table"><thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Created At</th><th>Actions</th></tr></thead><tbody>';
+
+            users.forEach(user => {
+                const createdAt = new Date(user.created_at).toLocaleDateString();
+                const name = escapeHtml(user.name);
+                const email = escapeHtml(user.email);
+
+                html += `
+                    <tr id="user-${user.id}">
+                        <td>${user.id}</td>
+                        <td>${name}</td>
+                        <td>${email}</td>
+                        <td>${createdAt}</td>
+                        <td class="actions">
+                            <button class="btn btn-small btn-edit" onclick='editUser(${user.id}, "${escapeQuotes(name)}", "${escapeQuotes(email)}")'>Edit</button>
+                            <button class="btn btn-small btn-danger" onclick='deleteUser(${user.id}, "${escapeQuotes(name)}")'>Delete</button>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            html += '</tbody></table>';
+            userList.innerHTML = html;
+        }
+
+        // Add new user
+        document.getElementById('add-user-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const name = document.getElementById('name').value;
+            const email = document.getElementById('email').value;
+            const messageDiv = document.getElementById('add-user-message');
+
+            try {
+                const response = await fetch(`${API_URL}/users`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ name, email })
+                });
+
+                if (response.ok) {
+                    messageDiv.innerHTML = '<span class="success">User added successfully!</span>';
+                    this.reset();
+                    setTimeout(() => messageDiv.innerHTML = '', 3000);
+                    loadUsers();
+                } else {
+                    const error = await response.text();
+                    messageDiv.innerHTML = `<span class="error">Error: ${error}</span>`;
+                }
+            } catch (error) {
+                messageDiv.innerHTML = `<span class="error">Error: ${error.message}</span>`;
+            }
+        });
+
+        // Delete user
+        async function deleteUser(id, name) {
+            if (!confirm(`Are you sure you want to delete ${name}?`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/users/${id}`, {
+                    method: 'DELETE'
+                });
+
+                if (response.ok || response.status === 204) {
+                    const row = document.getElementById(`user-${id}`);
+                    row.style.opacity = '0';
+                    setTimeout(() => {
+                        row.remove();
+                        // Check if table is empty
+                        const tbody = document.querySelector('.user-table tbody');
+                        if (tbody && tbody.children.length === 0) {
+                            loadUsers();
+                        }
+                    }, 500);
+                } else {
+                    const error = await response.text();
+                    alert('Error deleting user: ' + error);
+                }
+            } catch (error) {
+                alert('Error deleting user: ' + error.message);
+            }
+        }
+
+        // Edit user modal functions
+        function editUser(id, name, email) {
+            document.getElementById('edit-id').value = id;
+            document.getElementById('edit-name').value = name;
+            document.getElementById('edit-email').value = email;
+            document.getElementById('edit-modal').style.display = 'block';
+        }
+
+        function closeEditModal() {
+            document.getElementById('edit-modal').style.display = 'none';
+        }
+
+        // Handle edit form submission
+        document.getElementById('edit-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const id = document.getElementById('edit-id').value;
+            const name = document.getElementById('edit-name').value;
+            const email = document.getElementById('edit-email').value;
+
+            try {
+                const response = await fetch(`${API_URL}/users/${id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ name, email })
+                });
+
+                if (response.ok) {
+                    closeEditModal();
+                    loadUsers();
+                } else {
+                    const error = await response.text();
+                    alert('Error updating user: ' + error);
+                }
+            } catch (error) {
+                alert('Error updating user: ' + error.message);
+            }
+        });
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('edit-modal');
+            if (event.target == modal) {
+                closeEditModal();
+            }
+        }
+
+        // Utility functions
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function escapeQuotes(text) {
+            return text.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        }
+    </script>
+</body>
+</html>

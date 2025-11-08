@@ -1,6 +1,6 @@
-# If you prefer the allow list template instead of the deny list, see community template:
-# https://github.com/github/gitignore/blob/main/community/Golang/Go.AllowList.gitignore
-#
+# ===========================
+# Go Backend
+# ===========================
 # Binaries for programs and plugins
 *.exe
 *.exe~
@@ -17,16 +17,82 @@ coverage.*
 *.coverprofile
 profile.cov
 
-# Dependency directories (remove the comment below to include it)
-# vendor/
-
 # Go workspace file
 go.work
 go.work.sum
 
-# env file
-.env
+# Dependency directories
+vendor/
 
+# ===========================
+# Environment & Secrets
+# ===========================
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+secrets/
+
+# ===========================
+# Docker
+# ===========================
+# Docker volumes data
+postgres_data/
+pgadmin_data/
+
+# ===========================
+# Database
+# ===========================
+# Database dumps and backups
+*.sql.gz
+*.dump
+*.backup
+backup/
+dumps/
+
+# ===========================
+# Logs
+# ===========================
+*.log
+logs/
+*.log.*
+
+# ===========================
+# OS Files
+# ===========================
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Linux
+*~
+
+# ===========================
 # Editor/IDE
-# .idea/
-# .vscode/
+# ===========================
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+*.sublime-project
+*.sublime-workspace
+
+# ===========================
+# Temporary Files
+# ===========================
+tmp/
+temp/
+*.tmp
+*.bak
+*.cache
