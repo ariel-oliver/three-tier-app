@@ -135,4 +135,3 @@ three-tier-app/
 - Proper service dependencies
 - Volume persistence for database
 - Network isolation
-- Development and production configurations
